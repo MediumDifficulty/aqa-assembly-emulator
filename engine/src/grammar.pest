@@ -1,0 +1,27 @@
+WHITESPACE = _{ " " | "\t" }
+COMMENT = ${ ("//" | ";") ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+
+program = { SOI ~ line? ~ (NEWLINE ~ line?)* ~ EOI }
+
+text = @{ ASCII_ALPHANUMERIC+ }
+label = { text ~ ":" }
+
+
+line = { label | instruction }
+instruction = { opcode ~ argument? ~ ("," ~ argument)* }
+
+opcode = @{ ASCII_ALPHA+ }
+indirect_addr = { "[" ~ (register ~ (indirect_addr_op ~ (register | literal))?) ~ "]" }
+indirect_addr_op = { "+" | "-" }
+
+argument = _{ literal | register | indirect_addr }
+
+literal = ${ ( decimal_literal | hex_literal ) }
+register = ${ ^"R" ~ decimal }
+
+decimal_literal = ${ "#" ~ decimal }
+hex_literal = @{ "0x" ~ hex }
+
+decimal = @{ ASCII_DIGIT+ }
+hex = @{ HEX_DIGIT }
+
