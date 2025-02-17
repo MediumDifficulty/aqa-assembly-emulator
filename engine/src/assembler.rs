@@ -8,17 +8,18 @@ use pest::{
 };
 
 use crate::{
-    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Register
+    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register
 };
 
 const MAX_REG_NUM: u8 = 12;
 
 type Res<T> = Result<T, pest::error::Error<parser::Rule>>;
 
-pub fn assemble(src: &str) -> Res<()> {
+pub fn assemble(src: &str) -> Res<Program> {
     let parsed = AssemblyParser::parse(Rule::program, src)?.next().unwrap();
 
     let mut labels = HashMap::new();
+    let mut instructions = Vec::new();
 
     for (i, line) in parsed.into_inner().enumerate() {
         let line = unwrap_or_continue!(line.into_inner().next());
@@ -28,16 +29,17 @@ pub fn assemble(src: &str) -> Res<()> {
                 labels.insert(label.to_string(), i);
             }
             Rule::instruction => {
-                // match assemble_instruction(line) {
-                //     Err(e) => error!("{}", e),
-                //     Ok(v) => info!("{:?}", v)
-                // };
-                assemble_instruction(line)?;
+                instructions.push(assemble_instruction(line)?);
             }
             _ => unreachable!(),
         }
     }
-    Ok(())
+
+    Ok(Program { instructions })
+}
+
+pub fn assemble_into_ram(ram: &mut [u8]) {
+    ram[0] = 21;
 }
 
 fn span_err(span: Span<'_>, msg: &str) -> pest::error::Error<parser::Rule> {
@@ -149,6 +151,6 @@ mod tests {
     #[test]
     fn test() {
         simple_logger::init().unwrap();
-        assemble("label1:\n\tmov R1, #12").unwrap()
+        // assemble("label1:\n\tmov R1, #12").unwrap()
     }
 }

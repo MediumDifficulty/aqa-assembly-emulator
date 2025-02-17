@@ -7,8 +7,10 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+bitvec = "1.0.1"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
+funty = "2.0.0"
 log = "0.4.25"
 pest = "2.7.15"
 pest_derive = "2.7.15"
