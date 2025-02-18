@@ -15,7 +15,10 @@ jobs:
         
         - name: Install Node
           uses: actions/setup-node@v4
-        
+          
+        - name: Install node dependencies
+          run: npm ci
+
         - name: Build Web
           run: npm run build
         
