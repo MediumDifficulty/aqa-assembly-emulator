@@ -20,7 +20,7 @@ jobs:
           run: npm run build
         
         - name: Upload files to Github Pages
-          uses: actions/upload-pages-artifact@v4
+          uses: actions/upload-pages-artifact@v3
           with:
             path: build/
   deploy:
