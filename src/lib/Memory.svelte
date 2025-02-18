@@ -1,22 +1,20 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-
     const { memory }: { memory: Uint8Array } = $props()
 
     const LINES = 50
     const COLS  = 4 * 4
 
     const isPrintable = (char: number) => char >= 33 && char <= 126
-
-    // onMount(() => {
-    //     console.log(memory)
-    // })
 </script>
 
-<div class="w-full">
+<div class="max-h-screen overflow-auto relative pl-2">
+    <!-- <div class="sticky top-1 bg-white border-gray-500 border-1">
+        <span>Page: </span>
+        <input class="" type="number" name="" id="" maxlength="4">
+    </div> -->
     {#each Array(LINES).keys() as line}
         <div class="flex flex-row hover:bg-gray-200 font-mono">
-            <span class="ml-2 mr-3 text-gray-600">
+            <span class="mr-3 text-gray-600">
                 {(line * COLS).toString(16).padStart(8, "0")}
             </span>
             <span class="mr-3">

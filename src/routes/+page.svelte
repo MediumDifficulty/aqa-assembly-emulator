@@ -46,6 +46,6 @@
     <!-- <Editor /> -->
 <!-- {/await} -->
 <div class="w-full flex flex-row">
-    <div bind:this={container} class="h-screen w-[50%] relative"></div>
+    <div bind:this={container} class="h-screen w-1/3 relative"></div>
     <Memory memory={$RAM} />
 </div>

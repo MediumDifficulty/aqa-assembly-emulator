@@ -105,7 +105,7 @@ fn parse_reg(reg: Pair<'_, Rule>) -> Res<Register> {
             index_pair.as_span(),
             "Malformed register index",
         )))?,
-        _ => unreachable!(),
+        _ => Err(span_err(span, "Invalid register"))?,
     };
 
     if index > MAX_REG_NUM {
