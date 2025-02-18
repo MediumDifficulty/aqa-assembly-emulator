@@ -1,6 +1,4 @@
-use std::io::Write;
-
-use bitvec::{field::BitField, order::{Lsb0, Msb0}, slice::BitSlice, view::{AsBits, AsMutBits}};
+use bitvec::{field::BitField, order::Msb0, slice::BitSlice, view::AsMutBits};
 use funty::Integral;
 use log::info;
 
@@ -47,10 +45,6 @@ impl<'a> InstructionWriter<'a> {
             pos: 0,
             slice
         }
-    }
-
-    pub fn seek(&mut self, index: usize) {
-        self.pos = index;
     }
 
     pub fn skip(&mut self, count: usize) {

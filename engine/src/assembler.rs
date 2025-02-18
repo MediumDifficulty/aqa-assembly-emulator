@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use log::{debug, error, info};
 use pest::{
     error::ErrorVariant,
     iterators::{Pair, Pairs},
@@ -36,10 +35,6 @@ pub fn assemble(src: &str) -> Res<Program> {
     }
 
     Ok(Program { instructions })
-}
-
-pub fn assemble_into_ram(ram: &mut [u8]) {
-    ram[0] = 21;
 }
 
 fn span_err(span: Span<'_>, msg: &str) -> pest::error::Error<parser::Rule> {
@@ -146,8 +141,6 @@ fn parse_literal(literal: Pair<'_, Rule>) -> Res<u32> {
 
 #[cfg(test)]
 mod tests {
-    use super::assemble;
-
     #[test]
     fn test() {
         simple_logger::init().unwrap();
