@@ -2,7 +2,7 @@ use bitvec::{field::BitField, order::Msb0, slice::BitSlice, view::AsMutBits};
 use funty::Integral;
 use log::info;
 
-use crate::{DataProcessing, Instruction};
+use crate::{DataProcessing, Instruction, Register, Shift, ShiftAmount};
 
 impl Instruction {
     pub fn serialise(&self, mut dest: &mut [u8]) {
@@ -13,19 +13,10 @@ impl Instruction {
         match &self.instruction_body {
             crate::InstructionBody::DataProcessing(data_processing) => serialise_data_processing(&mut writer, &data_processing),
         }
-
-        // let mut buff = [0u8; 4];
-        // let bits = buff.as_mut_bits::<Msb0>();
-        // bits[2..=5].store_be(5u8);
-        
-        // print_serialised(&buff);
-
-        info!("{:?}", bits);
-        print_serialised(dest);
-        // info!("{:08b}", dest);
     }
 }
 
+#[allow(unused)]
 fn print_serialised(serialised: &[u8]) {
     let mut s = String::new();
     for byte in serialised {
@@ -56,6 +47,19 @@ impl<'a> InstructionWriter<'a> {
         self.slice[self.pos..end].store_be(value);
         self.pos = end;
     }
+
+    fn write_shift(&mut self, shift: Shift) {
+        match shift.amount {
+            crate::ShiftAmount::Immediate(val) => self.write(val, 5),
+            crate::ShiftAmount::Register(Register(reg)) => {
+                self.write(reg, 4);
+                self.write(0, 1);
+            },
+        }
+
+        self.write(shift.ty as u8, 2);
+        self.write(matches!(shift.amount, ShiftAmount::Register(_)) as u8, 1);
+    }
 }
 
 fn serialise_data_processing(writer: &mut InstructionWriter, instruction: &DataProcessing) {
@@ -83,7 +87,7 @@ fn serialise_data_processing(writer: &mut InstructionWriter, instruction: &DataP
         },
         crate::DataProcessingOperand::Register { shift, register } => {
             writer.slice.set(6, false);
-            writer.write(*shift, 8);
+            writer.write_shift(*shift);
             writer.write(register.0, 4);
         },
     }

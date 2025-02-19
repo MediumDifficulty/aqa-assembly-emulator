@@ -7,7 +7,7 @@ use pest::{
 };
 
 use crate::{
-    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register
+    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
 };
 
 const MAX_REG_NUM: u8 = 12;
@@ -69,7 +69,10 @@ fn assemble_mov(pairs: &mut Pairs<'_, Rule>, span: Span<'_>) -> Res<Instruction>
             value: parse_literal(src)? as u8,
         },
         Rule::register => DataProcessingOperand::Register {
-            shift: 0,
+            shift: Shift {
+                amount: crate::ShiftAmount::Immediate(0),
+                ty: crate::ShiftType::LogicalLeft
+            },
             register: parse_reg(src)?,
         },
         _ => Err(span_err(src.as_span(), "Invalid source"))?,
