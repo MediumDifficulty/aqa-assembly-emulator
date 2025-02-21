@@ -64,8 +64,7 @@ impl<'a> InstructionWriter<'a> {
 
 fn serialise_data_processing(writer: &mut InstructionWriter, instruction: &DataProcessing) {
     // Instruction code
-    writer.write(0, 1);
-    writer.write(0, 1);
+    writer.write(0, 2);
 
     // Skip Immediate Operand
     writer.skip(1);
@@ -73,8 +72,7 @@ fn serialise_data_processing(writer: &mut InstructionWriter, instruction: &DataP
     // Opcode
     writer.write(instruction.opcode as u8, 4);
 
-    // Do not set condition codes
-    writer.write(0, 1);
+    writer.write(instruction.set_condition_codes as u8, 1);
 
     writer.write(instruction.register.0, 4);
     writer.write(instruction.dest.0, 4);

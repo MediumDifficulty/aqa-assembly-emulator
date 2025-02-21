@@ -70,6 +70,8 @@ impl<'a> InstructionReader<'a> {
             let ty = ShiftType::from_u8(self.read(2).load_be::<u8>())
                 .expect("Unable to map to shift");
 
+            self.pos += 1;
+
             Shift {
                 amount: crate::ShiftAmount::Register(register),
                 ty
@@ -78,6 +80,8 @@ impl<'a> InstructionReader<'a> {
             let amount = self.read(5).load_be::<u8>();
             let ty = ShiftType::from_u8(self.read(2).load_be::<u8>())
                 .expect("Unable to map to shift");
+
+            self.pos += 1;
 
             Shift {
                 amount: crate::ShiftAmount::Immediate(amount),

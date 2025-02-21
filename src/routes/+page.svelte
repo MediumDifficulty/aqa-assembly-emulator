@@ -4,10 +4,9 @@
     import * as lang from "$lib/aqa_assmbly"
     import init, { step } from "$lib/engine"
     import Memory from "$lib/Memory.svelte";
-    import { FLAGS, RAM, REGISTERS } from "$lib/globals";
+    import { FLAGS, RAM, RAM_SIZE, REGISTERS } from "$lib/globals";
     import Registers from "$lib/Registers.svelte";
-    // import { RAM } from "$lib/globals";
-    // let { monacoEditor }: { monacoEditor: typeof Monaco } = $props()
+    import { get } from "svelte/store";
 
 
     let container: HTMLDivElement
@@ -43,11 +42,18 @@
 
     function stepCpu() {
         console.log("step")
-        const res: ExecutionResult = step($RAM, $REGISTERS, $FLAGS)
+        const res: ExecutionResult = step(get(RAM), get(REGISTERS), get(FLAGS))
         console.log(res)
         $FLAGS = res.flags
         REGISTERS.update(v => v)
         RAM.update(v => v)
+        console.log($REGISTERS)
+    }
+
+    function ResetCpu() {
+        $FLAGS = 0
+        REGISTERS.update(r => r.fill(0))
+        RAM.update(r => r.fill(0))
     }
 </script>
 
@@ -59,5 +65,6 @@
     </div>
     <div>
         <button onclick={stepCpu}>Step</button>
+        <button onclick={ResetCpu}>Reset</button>
     </div>
 </div>

@@ -178,6 +178,7 @@ pub struct DataProcessing {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum DataProcessingOperand {
+    #[cfg_attr(test, proptest(strategy = "any::<(u8, u8)>().prop_map(|(a, b)| Self::Immediate{ rotate: a % 16, value: b })"))]
     Immediate { rotate: u8, value: u8 },
     Register { shift: Shift, register: Register },
 }
@@ -192,7 +193,7 @@ pub struct Shift {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ShiftAmount {
-    #[cfg_attr(test, proptest(strategy = "any::<u8>().prop_map(|x| Self::Immediate(x))"))]
+    #[cfg_attr(test, proptest(strategy = "any::<u8>().prop_map(|x| Self::Immediate(x % 16))"))]
     Immediate(u8),
     Register(Register)
 }

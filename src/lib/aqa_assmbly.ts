@@ -1,6 +1,6 @@
 import type { Monaco } from "@monaco-editor/loader";
 import { MarkerSeverity, type editor, type IRange, type languages, type Position } from "monaco-editor";
-import { assemble_into_ram, test_assemble } from "./engine/engine";
+import { assemble_into_ram } from "./engine/engine";
 import { RAM } from "./globals";
 import { get } from "svelte/store";
 
@@ -178,13 +178,6 @@ export function initModel(ctx: Monaco, model: editor.ITextModel) {
         let _lint = assemble_into_ram(model.getValue(), get(RAM))
         RAM.update(r => r)
 
-        // get()
-        // RAM.update(ram => {
-        //     _lint = assemble_into_ram(model.getValue(), ram)
-        //     return ram
-        // })
-
-        // const _lint = assemble_into_ram(model.getValue(), RAM)
         if (_lint === null) {
             ctx.editor.setModelMarkers(model, "test", [
             ])

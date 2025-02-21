@@ -26,7 +26,6 @@
     ]
 
     const { registers, flags }: { registers: Uint32Array, flags: number } = $props()
-
 </script>
 
 <div class="relative w-full">
@@ -40,7 +39,7 @@
         {#each FLAG_NAMES as name, i}
             <span>
                 <div>{name}</div>
-                <div>{(flags >> i) & 1}</div>
+                <div>{(flags >> (3 - i)) & 1}</div>
             </span>
         {/each}
     </div>
