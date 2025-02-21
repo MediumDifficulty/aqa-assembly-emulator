@@ -27,4 +27,6 @@ wasm-bindgen = "0.2.100"
 opt-level = "s"
 
 [dev-dependencies]
+proptest = "1.6.0"
+proptest-derive = "0.5.1"
 simple_logger = "5.0.0"

@@ -114,27 +114,3 @@ fn deserialise_data_processing(reader: &mut InstructionReader) -> Result<DataPro
         set_condition_codes
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::Instruction;
-
-    #[test]
-    fn serde_1() {
-        let instruction = Instruction {
-            condition: crate::Condition::AL,
-            instruction_body: crate::InstructionBody::DataProcessing(crate::DataProcessing {
-                dest: crate::Register(3),
-                opcode: crate::DataProcessingOpcode::MOV,
-                operand: crate::DataProcessingOperand::Immediate { rotate: 0, value: 7 },
-                register: crate::Register(3),
-                set_condition_codes: false
-            })
-        };
-
-        let mut buff = [0u8; 4];
-        instruction.serialise(&mut buff);
-        let deserialised = Instruction::deserialise(&buff).unwrap();
-        assert_eq!(instruction, deserialised);
-    }
-}

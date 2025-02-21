@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc fa351c1db05f2c66922727c183643c280eb2984ce7659f81d511d2e1549f28c4 # shrinks to instruction = Instruction { condition: EQ, instruction_body: DataProcessing(DataProcessing { opcode: AND, set_condition_codes: false, register: Register(0), dest: Register(0), operand: Immediate { rotate: 16, value: 0 } }) }
