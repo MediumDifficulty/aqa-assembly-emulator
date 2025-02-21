@@ -18,12 +18,30 @@
         "PC"
     ]
 
-    const { registers }: { registers: Uint32Array } = $props()
+    const FLAG_NAMES = [
+        "N",
+        "Z",
+        "C",
+        "V"
+    ]
+
+    const { registers, flags }: { registers: Uint32Array, flags: number } = $props()
+
 </script>
 
-{#each REGISTER_NAMES as name, i}
-    <div>
-        <span>{name}</span>
-        <span>{registers[i]}</span>
+<div class="relative w-full">
+    {#each REGISTER_NAMES as name, i}
+        <div class="flex justify-between">
+            <span>{name}</span>
+            <span>{registers[i]}</span>
+        </div>
+    {/each}
+    <div class="flex flex-row justify-between">
+        {#each FLAG_NAMES as name, i}
+            <span>
+                <div>{name}</div>
+                <div>{(flags >> i) & 1}</div>
+            </span>
+        {/each}
     </div>
-{/each}
+</div>

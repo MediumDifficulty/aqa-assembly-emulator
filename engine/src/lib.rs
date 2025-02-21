@@ -1,7 +1,6 @@
 use assembler::assemble;
-use bitvec::{order::Lsb0, slice::BitSlice, view::BitView};
 use num_derive::FromPrimitive;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 mod assembler;
@@ -10,14 +9,6 @@ pub mod parser;
 mod serialise;
 mod emulator;
 mod deserialise;
-
-#[wasm_bindgen]
-pub fn test() -> i32 {
-    console_log::init_with_level(log::Level::Debug).unwrap();
-    set_panic_hook();
-    assemble("begin:\n\tmov R2, r1, [R2 + r3]").unwrap();
-    12
-}
 
 #[wasm_bindgen]
 pub fn test_assemble(src: &str) -> JsValue {
@@ -64,14 +55,23 @@ pub fn assemble_into_ram(src: &str, ram: &mut [u8]) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn run(ram: &mut [u8], registers: &mut [u32], flags: u8) -> u8 {
-    let state = ProcessorState {
+pub fn step(ram: &mut [u8], registers: &mut [u32], flags: u8) -> JsValue {
+    let mut state = ProcessorState {
         flags: Flags::from(flags),
         ram,
         registers: registers.try_into().unwrap()
     };
 
-    state.flags.into()
+    serde_wasm_bindgen::to_value(&match state.step() {
+        Ok(_) => ExecutionResult { message: "".into(), flags: state.flags.into() },
+        Err(e) => ExecutionResult { message: e.to_string(), flags: state.flags.into() },
+    }).unwrap()
+}
+
+#[derive(Serialize)]
+struct ExecutionResult {
+    message: String,
+    flags: u8
 }
 
 #[derive(Serialize)]
@@ -92,7 +92,7 @@ pub struct ProcessorState<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Flags {
+pub struct Flags {
     /// Negative
     n: bool,
     /// Zero
@@ -151,7 +151,6 @@ enum InstructionBody {
 }
 
 
-#[allow(unused)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DataProcessing {
     opcode: DataProcessingOpcode,
@@ -191,7 +190,6 @@ enum ShiftType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Register(u8);
 
-#[allow(unused)]
 #[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
 enum DataProcessingOpcode {
     AND,
@@ -212,7 +210,6 @@ enum DataProcessingOpcode {
     MVN,
 }
 
-#[allow(unused)]
 #[derive(Default, Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
 enum Condition {
     EQ,

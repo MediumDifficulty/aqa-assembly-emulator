@@ -10,7 +10,7 @@ use crate::{
     parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
 };
 
-const MAX_REG_NUM: u8 = 12;
+const MAX_REG_NUM: u8 = 15;
 
 type Res<T> = Result<T, pest::error::Error<parser::Rule>>;
 
