@@ -103,6 +103,9 @@ fn parse_reg(reg: Pair<'_, Rule>) -> Res<Register> {
             index_pair.as_span(),
             "Malformed register index",
         )))?,
+        Rule::program_counter => 15,
+        Rule::link_register => 14,
+        Rule::stack_pointer => 13,
         _ => Err(span_err(span, "Invalid register"))?,
     };
 

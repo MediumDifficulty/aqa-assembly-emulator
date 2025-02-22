@@ -277,7 +277,7 @@ const LANGUAGE: languages.IMonarchLanguage = {
                 regex: /^(\w+)(:)$/,
                 action: ["tag", "default"],
             },
-            [/R\d+/, "variable"],
+            [/(R\d+)|PC|LR|SP/, "variable"],
             [/#\d+/, "number"],
             [/\w+/, {
                 cases: { "@keywords": "keyword" },

@@ -17,7 +17,11 @@ indirect_addr_op = { "+" | "-" }
 argument = _{ literal | register | indirect_addr }
 
 literal = ${ ( decimal_literal | hex_literal ) }
-register = ${ ^"R" ~ decimal }
+register = ${ (^"R" ~ decimal) | stack_pointer | program_counter | link_register }
+
+stack_pointer = @{ "SP" }
+program_counter = @{ "PC" }
+link_register = @{ "LR" }
 
 decimal_literal = ${ "#" ~ decimal }
 hex_literal = @{ "0x" ~ hex }
