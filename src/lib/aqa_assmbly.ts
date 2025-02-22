@@ -175,7 +175,10 @@ export function init(ctx: Monaco) {
 
 export function initModel(ctx: Monaco, model: editor.ITextModel) {
     model.onDidChangeContent(e => {
-        let lints: Lint[] = engine.lint(model.getValue())
+        const modelValue = model.getValue()
+        engine.assemble_into_ram(modelValue, get(RAM))
+        RAM.update(r => r)
+        let lints: Lint[] = engine.lint(modelValue)
 
         ctx.editor.setModelMarkers(model, "linter", lints.map(lint => {
             const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
@@ -196,7 +199,8 @@ export function initModel(ctx: Monaco, model: editor.ITextModel) {
 type Lint = {
     err: string,
     from: number,
-    to: number
+    to: number,
+    line: number
 }
 
 function getCompletions(model: editor.ITextModel, position: Position, ctx: Monaco): languages.ProviderResult<languages.CompletionList> {

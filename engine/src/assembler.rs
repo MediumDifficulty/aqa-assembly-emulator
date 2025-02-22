@@ -7,7 +7,7 @@ use pest::{
 };
 
 use crate::{
-    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
+    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, unwrap_or_return, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
 };
 
 const MAX_REG_NUM: u8 = 15;
@@ -38,14 +38,22 @@ pub fn assemble(src: &str) -> Res<Program> {
 }
 
 pub fn lint_line(line: &str) -> Res<()> {
-    let parsed = AssemblyParser::parse(Rule::line, line)?.next().unwrap()
-        .into_inner()
-        .next()
-        .unwrap();
+    let parsed = 
+        unwrap_or_return!(
+            unwrap_or_return!(
+                AssemblyParser::parse(Rule::lint_line, line)?
+                    .next(),
+                Ok(())
+            )
+            .into_inner()
+            .next(),
+            Ok(())
+        );
 
     match parsed.as_rule() {
         Rule::label => Ok(()),
         Rule::instruction => assemble_instruction(parsed).map(|_| ()),
+        Rule::EOI => Ok(()),
         _ => unreachable!(),
     }
 }
