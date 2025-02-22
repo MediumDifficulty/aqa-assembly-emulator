@@ -1,6 +1,6 @@
 import type { Monaco } from "@monaco-editor/loader";
 import { MarkerSeverity, type editor, type IRange, type languages, type Position } from "monaco-editor";
-import { assemble_into_ram } from "./engine/engine";
+import * as engine from "./engine/engine";
 import { RAM } from "./globals";
 import { get } from "svelte/store";
 
@@ -175,29 +175,20 @@ export function init(ctx: Monaco) {
 
 export function initModel(ctx: Monaco, model: editor.ITextModel) {
     model.onDidChangeContent(e => {
-        let _lint = assemble_into_ram(model.getValue(), get(RAM))
-        RAM.update(r => r)
+        let lints: Lint[] = engine.lint(model.getValue())
 
-        if (_lint === null) {
-            ctx.editor.setModelMarkers(model, "test", [
-            ])
-            return
-        }
-
-        const lint = _lint as Lint
-        const from = model.getPositionAt(lint.from)
-        const to = model.getPositionAt(lint.to)
-
-        ctx.editor.setModelMarkers(model, "test", [
-            {
-                severity: MarkerSeverity.Error,
+        ctx.editor.setModelMarkers(model, "linter", lints.map(lint => {
+            const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
+            console.log(lint)
+            return {
+                startLineNumber: lint.line + 1,
+                endLineNumber: lint.line + 1,
+                startColumn: firstChar + lint.from,
+                endColumn: firstChar + lint.to,
                 message: lint.err,
-                startLineNumber: from.lineNumber,
-                startColumn: from.column,
-                endLineNumber: to.lineNumber,
-                endColumn: to.column
+                severity: MarkerSeverity.Error
             }
-        ])
+        }))
         // console.log("lint:", )
     })
 }

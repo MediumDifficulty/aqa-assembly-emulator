@@ -1,4 +1,4 @@
-WHITESPACE = _{ " " | "\t" }
+WHITESPACE = _{ (" " | "\t")+ }
 COMMENT = ${ ("//" | ";") ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
 program = { SOI ~ line? ~ (NEWLINE ~ line?)* ~ EOI }
@@ -6,8 +6,7 @@ program = { SOI ~ line? ~ (NEWLINE ~ line?)* ~ EOI }
 text = @{ ASCII_ALPHANUMERIC+ }
 label = { text ~ ":" }
 
-
-line = { label | instruction }
+line = { WHITESPACE? ~ (label | instruction) }
 instruction = { opcode ~ argument? ~ ("," ~ argument)* }
 
 opcode = @{ ASCII_ALPHA+ }

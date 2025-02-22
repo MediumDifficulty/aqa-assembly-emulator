@@ -37,6 +37,19 @@ pub fn assemble(src: &str) -> Res<Program> {
     Ok(Program { instructions })
 }
 
+pub fn lint_line(line: &str) -> Res<()> {
+    let parsed = AssemblyParser::parse(Rule::line, line)?.next().unwrap()
+        .into_inner()
+        .next()
+        .unwrap();
+
+    match parsed.as_rule() {
+        Rule::label => Ok(()),
+        Rule::instruction => assemble_instruction(parsed).map(|_| ()),
+        _ => unreachable!(),
+    }
+}
+
 fn span_err(span: Span<'_>, msg: &str) -> pest::error::Error<parser::Rule> {
     pest::error::Error::new_from_span(
         ErrorVariant::CustomError {

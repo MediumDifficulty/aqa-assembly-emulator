@@ -14,47 +14,37 @@ mod emulator;
 mod deserialise;
 
 #[wasm_bindgen]
-pub fn test_assemble(src: &str) -> JsValue {
-    match assemble(src) {
-        Ok(_) => JsValue::null(),
-        Err(e) => {
-            let span = match e.location {
-                pest::error::InputLocation::Pos(p) => (p, p),
-                pest::error::InputLocation::Span(p) => p,
-            };
+pub fn lint(src: &str) -> Vec<JsValue> {
+    src.lines()
+        .enumerate()
+        .filter_map(|(i, line)| {
+            match assembler::lint_line(line) {
+                Ok(_) => None,
+                Err(e) => {
+                    let span = match e.location {
+                        pest::error::InputLocation::Pos(p) => (p, p),
+                        pest::error::InputLocation::Span(p) => p,
+                    };
 
-            serde_wasm_bindgen::to_value(&Lint {
-                from: span.0 as u32,
-                to: span.1 as u32,
-                err: e.with_path("program.as").to_string(),
-            }).unwrap()
-        },
-    }
+                    Some(Lint {
+                        err: e.with_path("program.as").to_string(),
+                        from: span.0 as u32,
+                        to: span.1 as u32,
+                        line: i as u32
+                    })
+                },
+            }
+        })
+        .map(|lint| serde_wasm_bindgen::to_value(&lint).unwrap())
+        .collect::<Vec<_>>()
 }
 
 #[wasm_bindgen]
-pub fn assemble_into_ram(src: &str, ram: &mut [u8]) -> JsValue {
+pub fn assemble_into_ram(src: &str, ram: &mut [u8]) {
     setup_logging();
-    let assembled = assemble(src);
-    
-    match assembled {
-        Ok(prog) => {
-            ram.fill(0);
-            prog.serialise(ram);
-            JsValue::null()
-        },
-        Err(e) => {
-            let span = match e.location {
-                pest::error::InputLocation::Pos(p) => (p, p),
-                pest::error::InputLocation::Span(p) => p,
-            };
-
-            serde_wasm_bindgen::to_value(&Lint {
-                from: span.0 as u32,
-                to: span.1 as u32,
-                err: e.with_path("program.as").to_string(),
-            }).unwrap()
-        },
+    if let Ok(prog) = assemble(src) {
+        ram.fill(0);
+        prog.serialise(ram);
     }
 }
 
@@ -81,9 +71,10 @@ struct ExecutionResult {
 
 #[derive(Serialize)]
 struct Lint {
-    err: String,
-    from: u32,
-    to: u32
+    pub err: String,
+    pub line: u32,
+    pub from: u32,
+    pub to: u32
 }
 
 pub fn setup_logging() {
