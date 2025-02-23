@@ -1,4 +1,5 @@
 use assembler::assemble;
+use log::info;
 use num_derive::FromPrimitive;
 use serde::Serialize;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
@@ -82,7 +83,8 @@ pub fn setup_logging() {
     static mut INITIALISED: bool = false;
     unsafe {
         if !INITIALISED {
-            console_log::init().unwrap();
+            console_log::init_with_level(log::Level::Trace).unwrap();
+            info!("Initialised logging");
             INITIALISED = true
         }
     }
@@ -94,7 +96,7 @@ pub struct ProcessorState<'a> {
     pub flags: Flags
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Flags {
     /// Negative
     n: bool,
@@ -153,8 +155,16 @@ pub struct Instruction {
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InstructionBody {
     DataProcessing(DataProcessing),
+    Branch(Branch)
 }
 
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(Arbitrary))]
+pub struct Branch {
+    link: bool,
+    #[cfg_attr(test, proptest(strategy = "any::<u32>().prop_map(|x| x & ((1 << 24) - 1))"))]
+    offset: u32
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(test, derive(Arbitrary))]

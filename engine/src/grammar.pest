@@ -13,7 +13,7 @@ instruction = { opcode ~ argument? ~ ("," ~ argument)* }
 indirect_addr = { "[" ~ (register ~ (indirect_addr_op ~ (register | literal))?) ~ "]" }
 indirect_addr_op = { "+" | "-" }
 
-argument = _{ literal | register | indirect_addr }
+argument = _{ literal | register | indirect_addr | text }
 
 literal = ${ negation? ~ (decimal_literal | hex_literal) }
 register = ${ (^"R" ~ decimal) | stack_pointer | program_counter | link_register }
@@ -78,9 +78,12 @@ base_opcode = @{
     op_teq |
     op_cmp |
     op_cmn |
+    op_or  |
     op_mov |
     op_bic |
-    op_mvn
+    op_mvn |
+    op_bl  |
+    op_b
 }
 
 op_and = ${ ^"and" }
@@ -94,6 +97,9 @@ op_tst = ${ ^"tst" }
 op_teq = ${ ^"teq" }
 op_cmp = ${ ^"cmp" }
 op_cmn = ${ ^"cmn" }
+op_or =  ${ ^"orr" | ^"or" }
 op_mov = ${ ^"mov" }
 op_bic = ${ ^"bic" }
 op_mvn = ${ ^"mvn" | ^"not" }
+op_b = ${ ^"b" }
+op_bl = ${ ^"bl" }

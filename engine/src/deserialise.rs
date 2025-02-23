@@ -4,11 +4,13 @@ use anyhow::Result;
 use bitvec::prelude::*;
 use num_traits::FromPrimitive;
 
+use crate::Branch;
 use crate::Condition;
 use crate::DataProcessing;
 use crate::DataProcessingOpcode;
 use crate::DataProcessingOperand;
 use crate::Instruction;
+use crate::InstructionBody;
 use crate::Register;
 use crate::Shift;
 use crate::ShiftType;
@@ -20,15 +22,14 @@ impl Instruction {
         let condition = Condition::from_u8(bits[0..4].load_be::<u8>())
             .context("Invalid opcode")?;
 
-        let mut reader = InstructionReader::new(&bits[6..]);
 
-        match bits[4..=5].load_be::<u8>() {
-            0b00 => deserialise_data_processing(&mut reader).map(|body| Instruction {
-                condition,
-                body: crate::InstructionBody::DataProcessing(body)
-            }),
+        let body = match bits[4..=5].load_be::<u8>() {
+            0b00 => deserialise_data_processing(&mut InstructionReader::new(&bits[6..])).map(InstructionBody::DataProcessing),
+            0b10 => deserialise_branch(&mut InstructionReader::new(&bits[7..])).map(InstructionBody::Branch),
             _ => Err(anyhow!("Invalid Opcode"))
-        }
+        }?;
+
+        Ok(Instruction { condition, body })
     }
 }
 
@@ -89,6 +90,13 @@ impl<'a> InstructionReader<'a> {
             }
         }
     }
+}
+
+fn deserialise_branch(reader: &mut InstructionReader) -> Result<Branch> {
+    let link = reader.read_bool();
+    let offset = reader.read(24).load_be::<u32>();
+
+    Ok(Branch { link, offset })
 }
 
 fn deserialise_data_processing(reader: &mut InstructionReader) -> Result<DataProcessing> {

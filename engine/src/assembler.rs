@@ -91,13 +91,16 @@ fn assemble_instruction(src: Pair<'_, parser::Rule>) -> Res<Instruction> {
         Rule::op_add => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
         Rule::op_adc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
         Rule::op_rsc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
-        Rule::op_tst => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
-        Rule::op_teq => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
-        Rule::op_cmp => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
-        Rule::op_cmn => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
-        Rule::op_mov => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MOV),
+        Rule::op_tst => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
+        Rule::op_teq => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
+        Rule::op_cmp => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
+        Rule::op_cmn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
+        Rule::op_or => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ORR),
+        Rule::op_mov => assemble_two_arg_dp_dest(&mut inner, src_span, DataProcessingOpcode::MOV),
         Rule::op_bic => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
         Rule::op_mvn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
+        Rule::op_b => assemble_branch(&mut inner, src_span, false),
+        Rule::op_bl => assemble_branch(&mut inner, src_span, true),
         _ => Err(span_err(opcode_span, "Invalid opcode")),
     }?;
 
@@ -127,7 +130,17 @@ impl Condition {
     }
 }
 
-fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<InstructionBody> {
+fn assemble_branch(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, link: bool) -> Res<InstructionBody> {
+    let offset = pairs.next().ok_or(span_err(span, "Missing offset"))?;
+    let offset = match offset.as_rule() {
+        Rule::literal => parse_literal(offset)?,
+        _ => return Err(span_err(span, "Invalid offset"))
+    };
+
+    Ok(InstructionBody::Branch(crate::Branch { link, offset }))
+}
+
+fn assemble_two_arg_dp_dest(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<InstructionBody> {
     let dest_reg = pairs.next().ok_or(span_err(span, "Missing destination"))?;
     let src = pairs.next().ok_or(span_err(span, "Missing source"))?;
 
@@ -144,6 +157,26 @@ fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: Data
             operand,
             set_condition_codes: false,
             register: Register(0) // TODO: Expand instruction to use this as extra immediate space for MOV
+    }))
+}
+
+fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<InstructionBody> {
+    let reg1 = pairs.next().ok_or(span_err(span, "Missing register operand"))?;
+    let src = pairs.next().ok_or(span_err(span, "Missing source"))?;
+
+    if pairs.next().is_some() {
+        return Err(span_err(span, "Expected end of instruction"))
+    }
+
+    let reg1 = parse_reg(reg1)?;
+    let operand = parse_dp_operand(src)?;
+
+    Ok(InstructionBody::DataProcessing(DataProcessing {
+            dest: Register(0),
+            opcode,
+            operand,
+            set_condition_codes: false,
+            register: reg1
     }))
 }
 
@@ -235,7 +268,7 @@ fn parse_literal(literal: Pair<'_, Rule>) -> Res<u32> {
             .parse()
             .or(Err(span_err(span, "Invalid decimal literal"))),
         Rule::hex_literal => u32::from_str_radix(
-            literal
+            contents
                 .into_inner()
                 .next()
                 .expect("Invalid literal")
@@ -244,6 +277,12 @@ fn parse_literal(literal: Pair<'_, Rule>) -> Res<u32> {
         )
         .or(Err(span_err(span, "Invalid hex literal"))),
         _ => unreachable!(),
+    }?;
+
+    if negative {
+        Ok(!value + 1)
+    } else {
+        Ok(value)
     }
 }
 

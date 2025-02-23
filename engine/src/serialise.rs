@@ -2,7 +2,7 @@ use bitvec::{field::BitField, order::Msb0, slice::BitSlice, view::AsMutBits};
 use funty::Integral;
 use log::info;
 
-use crate::{DataProcessing, Instruction, Register, Shift, ShiftAmount};
+use crate::{Branch, DataProcessing, Instruction, Register, Shift, ShiftAmount};
 
 impl Instruction {
     pub fn serialise(&self, mut dest: &mut [u8]) {
@@ -12,6 +12,7 @@ impl Instruction {
 
         match &self.body {
             crate::InstructionBody::DataProcessing(data_processing) => serialise_data_processing(&mut writer, &data_processing),
+            crate::InstructionBody::Branch(branch) => serialise_branch(&mut writer, &branch),
         }
     }
 }
@@ -60,6 +61,12 @@ impl<'a> InstructionWriter<'a> {
         self.write(shift.ty as u8, 2);
         self.write(matches!(shift.amount, ShiftAmount::Register(_)) as u8, 1);
     }
+}
+
+fn serialise_branch(writer: &mut InstructionWriter, instruction: &Branch) {
+    writer.write(0b101, 3);
+    writer.write(instruction.link as u8, 1);
+    writer.write(instruction.offset, 24);
 }
 
 fn serialise_data_processing(writer: &mut InstructionWriter, instruction: &DataProcessing) {
