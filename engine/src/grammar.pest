@@ -15,8 +15,10 @@ indirect_addr_op = { "+" | "-" }
 
 argument = _{ literal | register | indirect_addr }
 
-literal = ${ ( decimal_literal | hex_literal ) }
+literal = ${ negation? ~ (decimal_literal | hex_literal) }
 register = ${ (^"R" ~ decimal) | stack_pointer | program_counter | link_register }
+
+negation = @{ "-" }
 
 stack_pointer = @{ ^"SP" }
 program_counter = @{ ^"PC" }

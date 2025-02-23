@@ -217,11 +217,17 @@ fn parse_reg(reg: Pair<'_, Rule>) -> Res<Register> {
 
 fn parse_literal(literal: Pair<'_, Rule>) -> Res<u32> {
     let span = literal.as_span();
-    let literal = literal.into_inner()
-        .next().expect("Invalid literal");
+    let mut inner = literal.into_inner();
 
-    match literal.as_rule() {
-        Rule::decimal_literal => literal
+    let next = inner.next().expect("Invalid literal");
+
+    let (contents, negative) = match next.as_rule() {
+        Rule::negation => (inner.next().expect("Missing literal body"), true),
+        _ => (next, false)
+    };
+
+    let value = match contents.as_rule() {
+        Rule::decimal_literal => contents
             .into_inner()
             .next()
             .expect("Invalid literal")
