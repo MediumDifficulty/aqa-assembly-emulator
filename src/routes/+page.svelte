@@ -4,17 +4,16 @@
     import * as lang from "$lib/aqa_assmbly"
     import init, { step } from "$lib/engine"
     import Memory from "$lib/Memory.svelte";
-    import { FLAGS, RAM, RAM_SIZE, REGISTERS } from "$lib/globals";
+    import { FLAGS, RAM, REGISTERS } from "$lib/globals";
     import Registers from "$lib/Registers.svelte";
     import { get } from "svelte/store";
-
+    import * as monacoEditor from 'monaco-editor';
 
     let container: HTMLDivElement
     onMount(async () => {
         await init()
 
-        const monacoEditor = await import("monaco-editor")
-        loader.config({ monaco: monacoEditor.default })
+        loader.config({ monaco: monacoEditor })
 
         let monaco = await loader.init()
         lang.init(monaco)
