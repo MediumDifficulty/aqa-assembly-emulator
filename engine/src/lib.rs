@@ -146,7 +146,7 @@ impl Program {
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Instruction {
     condition: Condition,
-    instruction_body: InstructionBody,
+    body: InstructionBody,
 }
 
 #[derive(Debug, PartialEq, Eq)]

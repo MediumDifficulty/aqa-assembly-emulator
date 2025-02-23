@@ -25,7 +25,7 @@ impl Instruction {
         match bits[4..=5].load_be::<u8>() {
             0b00 => deserialise_data_processing(&mut reader).map(|body| Instruction {
                 condition,
-                instruction_body: crate::InstructionBody::DataProcessing(body)
+                body: crate::InstructionBody::DataProcessing(body)
             }),
             _ => Err(anyhow!("Invalid Opcode"))
         }

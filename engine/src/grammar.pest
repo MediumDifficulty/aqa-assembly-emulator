@@ -10,7 +10,6 @@ lint_line = _{ SOI ~ line? ~ EOI }
 line = { WHITESPACE? ~ (label | instruction) }
 instruction = { opcode ~ argument? ~ ("," ~ argument)* }
 
-opcode = @{ ASCII_ALPHA+ }
 indirect_addr = { "[" ~ (register ~ (indirect_addr_op ~ (register | literal))?) ~ "]" }
 indirect_addr_op = { "+" | "-" }
 
@@ -29,3 +28,70 @@ hex_literal = @{ "0x" ~ hex }
 decimal = @{ ASCII_DIGIT+ }
 hex = @{ HEX_DIGIT }
 
+opcode = @{ base_opcode ~ condition? }
+
+condition = @{
+    cond_eq |
+    cond_ne |
+    cond_cs |
+    cond_cc |
+    cond_mi |
+    cond_pl |
+    cond_vs |
+    cond_vc |
+    cond_hi |
+    cond_ls |
+    cond_ge |
+    cond_lt |
+    cond_gt |
+    cond_le |
+    cond_al
+}
+
+cond_eq = ${ ^"EQ" }
+cond_ne = ${ ^"NE" }
+cond_cs = ${ ^"CS" }
+cond_cc = ${ ^"CC" }
+cond_mi = ${ ^"MI" }
+cond_pl = ${ ^"PL" }
+cond_vs = ${ ^"VS" }
+cond_vc = ${ ^"VC" }
+cond_hi = ${ ^"HI" }
+cond_ls = ${ ^"LS" }
+cond_ge = ${ ^"GE" }
+cond_lt = ${ ^"LT" }
+cond_gt = ${ ^"GT" }
+cond_le = ${ ^"LE" }
+cond_al = ${ ^"AL" }
+
+base_opcode = @{ 
+    op_and |
+    op_eor |
+    op_sub |
+    op_rsb |
+    op_add |
+    op_adc |
+    op_rsc |
+    op_tst |
+    op_teq |
+    op_cmp |
+    op_cmn |
+    op_mov |
+    op_bic |
+    op_mvn
+}
+
+op_and = ${ ^"and" }
+op_eor = ${ ^"eor" | ^"xor" }
+op_sub = ${ ^"sub" }
+op_rsb = ${ ^"rsb" }
+op_add = ${ ^"add" }
+op_adc = ${ ^"adc" }
+op_rsc = ${ ^"rsc" }
+op_tst = ${ ^"tst" }
+op_teq = ${ ^"teq" }
+op_cmp = ${ ^"cmp" }
+op_cmn = ${ ^"cmn" }
+op_mov = ${ ^"mov" }
+op_bic = ${ ^"bic" }
+op_mvn = ${ ^"mvn" | ^"not" }

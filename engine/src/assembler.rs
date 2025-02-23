@@ -71,27 +71,63 @@ fn assemble_instruction(src: Pair<'_, parser::Rule>) -> Res<Instruction> {
     let src_span = src.as_span();
     let mut inner = src.into_inner();
     let opcode_pair = inner.next().ok_or(span_err(src_span, "Missing opcode"))?;
-    let opcode = opcode_pair.as_str();
-    match opcode.to_lowercase().as_str() {
-        "and" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::AND),
-        "eor" | "xor" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::EOR),
-        "sub" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::SUB),
-        "rsb" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSB),
-        "add" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
-        "adc" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
-        "rsc" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
-        "tst" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
-        "teq" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
-        "cmp" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
-        "cmn" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
-        "mov" => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MOV),
-        "bic" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
-        "mvn" | "not" => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
-        _ => Err(span_err(opcode_pair.as_span(), "Invalid opcode")),
+    let opcode_span = opcode_pair.as_span();
+    let mut opcode_pair = opcode_pair.into_inner();
+
+    let opcode_rule = opcode_pair.next().ok_or(span_err(src_span, "Missing base"))?.as_rule();
+    let condition_rule = opcode_pair.next()
+        .map(|cond| cond.as_rule())
+        .unwrap_or(Rule::cond_al);
+
+    let condition = Condition::from_rule(condition_rule) 
+        .ok_or(span_err(src_span, "Invalid condition"))?;
+
+
+    let body = match &opcode_rule {
+        Rule::op_and => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::AND),
+        Rule::op_eor => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::EOR),
+        Rule::op_sub => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::SUB),
+        Rule::op_rsb => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSB),
+        Rule::op_add => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
+        Rule::op_adc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
+        Rule::op_rsc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
+        Rule::op_tst => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
+        Rule::op_teq => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
+        Rule::op_cmp => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
+        Rule::op_cmn => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
+        Rule::op_mov => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MOV),
+        Rule::op_bic => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
+        Rule::op_mvn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
+        _ => Err(span_err(opcode_span, "Invalid opcode")),
+    }?;
+
+    Ok(Instruction { condition, body })
+}
+
+impl Condition {
+    fn from_rule(rule: Rule) -> Option<Self> {
+        match rule {
+            Rule::cond_eq => Some(Condition::EQ),
+            Rule::cond_ne => Some(Condition::NE),
+            Rule::cond_cs => Some(Condition::CS),
+            Rule::cond_cc => Some(Condition::CC),
+            Rule::cond_mi => Some(Condition::MI),
+            Rule::cond_pl => Some(Condition::PL),
+            Rule::cond_vs => Some(Condition::VS),
+            Rule::cond_vc => Some(Condition::VC),
+            Rule::cond_hi => Some(Condition::HI),
+            Rule::cond_ls => Some(Condition::LS),
+            Rule::cond_ge => Some(Condition::GE),
+            Rule::cond_lt => Some(Condition::LT),
+            Rule::cond_gt => Some(Condition::GT),
+            Rule::cond_le => Some(Condition::LE),
+            Rule::cond_al => Some(Condition::AL),
+            _ => None
+        }
     }
 }
 
-fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<Instruction> {
+fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<InstructionBody> {
     let dest_reg = pairs.next().ok_or(span_err(span, "Missing destination"))?;
     let src = pairs.next().ok_or(span_err(span, "Missing source"))?;
 
@@ -102,19 +138,16 @@ fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: Data
     let dest = parse_reg(dest_reg)?;
     let operand = parse_dp_operand(src)?;
 
-    Ok(Instruction {
-        condition: Condition::default(),
-        instruction_body: InstructionBody::DataProcessing(DataProcessing {
+    Ok(InstructionBody::DataProcessing(DataProcessing {
             dest,
             opcode,
             operand,
             set_condition_codes: false,
             register: Register(0) // TODO: Expand instruction to use this as extra immediate space for MOV
-        })
-    })
+    }))
 }
 
-fn assemble_three_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<Instruction> {
+fn assemble_three_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<InstructionBody> {
     let dest_reg = pairs.next().ok_or(span_err(span, "Missing destination"))?;
     let lhs = pairs.next().ok_or(span_err(span, "Missing lhs"))?;
     let rhs = pairs.next().ok_or(span_err(span, "Missing rhs"))?;
@@ -127,16 +160,13 @@ fn assemble_three_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: Da
     let lhs = parse_reg(lhs)?;
     let operand = parse_dp_operand(rhs)?;
 
-    Ok(Instruction {
-        condition: Condition::default(),
-        instruction_body: InstructionBody::DataProcessing(DataProcessing {
+    Ok(InstructionBody::DataProcessing(DataProcessing {
             dest,
             opcode,
             operand,
             set_condition_codes: false,
             register: lhs
-        })
-    })
+    }))
 }
 
 fn parse_dp_operand(src: Pair<'_, Rule>) -> Res<DataProcessingOperand> {

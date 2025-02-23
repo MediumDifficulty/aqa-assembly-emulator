@@ -6,5 +6,10 @@
       1. Instruction pretty printing
 2. Configurable bases for numbers
 3. CI For Github Pages ✅
-4. Register aliases
-5. WASM JIT?
+4. Register aliases ✅
+5. Debugging
+   1. Breakpoints
+   2. Current instruction highlight
+6. Rust-side hover handler for editor
+7. Rust-side tab complete for editor
+8. WASM JIT?

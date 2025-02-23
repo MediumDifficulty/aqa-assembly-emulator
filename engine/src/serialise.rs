@@ -10,7 +10,7 @@ impl Instruction {
         let mut writer = InstructionWriter::new(bits);
         writer.write(self.condition as u8, 4);
 
-        match &self.instruction_body {
+        match &self.body {
             crate::InstructionBody::DataProcessing(data_processing) => serialise_data_processing(&mut writer, &data_processing),
         }
     }
@@ -102,7 +102,7 @@ mod tests {
         let mut dest = [0u8; 4];
         let instruction = Instruction {
             condition: Default::default(),
-            instruction_body: crate::InstructionBody::DataProcessing(crate::DataProcessing {
+            body: crate::InstructionBody::DataProcessing(crate::DataProcessing {
                 opcode: crate::DataProcessingOpcode::MOV,
                 set_condition_codes: false,
                 register: crate::Register(0),

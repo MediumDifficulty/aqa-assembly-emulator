@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use log::info;
 
 use crate::{Condition, DataProcessing, DataProcessingOpcode, Flags, Instruction, ProcessorState, Register, Shift};
 
@@ -10,14 +9,12 @@ impl<'a> ProcessorState<'a> {
         let instruction = &self.ram[start_instruction..end_instruction].try_into()?;
         let instruction = Instruction::deserialise(instruction)?;
 
-        info!("{instruction:?}");
-
         if !instruction.condition.matches(self.flags) {
             self.inc_pc();
             return Ok(());
         }
 
-        match instruction.instruction_body {
+        match instruction.body {
             crate::InstructionBody::DataProcessing(data_processing) => self.execute_data_processing(data_processing),
         }?;
 
