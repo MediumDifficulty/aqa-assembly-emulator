@@ -40,28 +40,65 @@ impl<'a> ProcessorState<'a> {
         let mut flags = self.flags;
         let dest = self.get_register_mut(instruction.dest)?;
 
+        // TODO: Implement overflow flag
         match instruction.opcode {
             DataProcessingOpcode::AND => *dest = lhs & rhs,
             DataProcessingOpcode::EOR => *dest = lhs ^ rhs,
             DataProcessingOpcode::SUB => {
-                *dest = lhs - rhs;
-                flags.v = *dest > lhs
+                *dest = lhs.wrapping_sub(rhs);
+                flags.c = *dest >= lhs;
             },
             DataProcessingOpcode::RSB => {
-                *dest = rhs - lhs;
-                flags.v = *dest > rhs
+                *dest = rhs.wrapping_sub(lhs);
+                flags.c = *dest > rhs
             },
-            DataProcessingOpcode::ADD => todo!(),
-            DataProcessingOpcode::ADC => todo!(),
-            DataProcessingOpcode::SBC => todo!(),
-            DataProcessingOpcode::RSC => todo!(),
-            DataProcessingOpcode::TST => todo!(),
-            DataProcessingOpcode::TEQ => todo!(),
-            DataProcessingOpcode::CMP => todo!(),
-            DataProcessingOpcode::CMN => todo!(),
-            DataProcessingOpcode::ORR => todo!(),
+            DataProcessingOpcode::ADD => {
+                *dest = lhs.wrapping_add(rhs);
+                flags.c = *dest > lhs;
+            },
+            DataProcessingOpcode::ADC => {
+                *dest = lhs.wrapping_add(rhs).wrapping_add(flags.c as u32);
+                flags.c = *dest > lhs;
+            },
+            DataProcessingOpcode::SBC => {
+                *dest = lhs.wrapping_sub(rhs).wrapping_add(flags.c as u32).wrapping_sub(1);
+            },
+            DataProcessingOpcode::RSC => {
+                *dest = rhs.wrapping_sub(lhs).wrapping_add(flags.c as u32).wrapping_sub(1);
+            },
+            DataProcessingOpcode::TST => {
+                let dummy = lhs & rhs;
+                self.flags.z = dummy == 0;
+                self.flags.n = (dummy >> 31) & 1 == 1; 
+        
+                return Ok(());
+            },
+            DataProcessingOpcode::TEQ => {
+                let dummy = lhs ^ rhs;
+                self.flags.z = dummy == 0;
+                self.flags.n = (dummy >> 31) & 1 == 1; 
+        
+                return Ok(());
+            },
+            DataProcessingOpcode::CMP => {
+                let dummy = lhs.wrapping_sub(rhs);
+                self.flags.c = dummy >= lhs;
+                self.flags.z = dummy == 0;
+                self.flags.n = (dummy >> 31) & 1 == 1; 
+        
+                return Ok(());
+            },
+            DataProcessingOpcode::CMN => {
+                let dummy = lhs.wrapping_add(rhs);
+                self.flags.c = dummy > lhs;
+                self.flags.z = dummy == 0;
+                self.flags.n = (dummy >> 31) & 1 == 1; 
+
+                return Ok(());
+            },
+            DataProcessingOpcode::ORR => *dest = lhs | rhs,
             DataProcessingOpcode::MOV => *dest = rhs,
-            DataProcessingOpcode::BIC => todo!(),
+            DataProcessingOpcode::BIC => *dest = lhs & !rhs,
             DataProcessingOpcode::MVN => *dest = !rhs,
         };
 

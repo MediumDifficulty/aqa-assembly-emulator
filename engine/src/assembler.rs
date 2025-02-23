@@ -72,43 +72,88 @@ fn assemble_instruction(src: Pair<'_, parser::Rule>) -> Res<Instruction> {
     let mut inner = src.into_inner();
     let opcode_pair = inner.next().ok_or(span_err(src_span, "Missing opcode"))?;
     let opcode = opcode_pair.as_str();
-    match opcode {
-        "mov" => assemble_mov(&mut inner, src_span),
+    match opcode.to_lowercase().as_str() {
+        "and" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::AND),
+        "eor" | "xor" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::EOR),
+        "sub" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::SUB),
+        "rsb" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSB),
+        "add" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
+        "adc" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
+        "rsc" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
+        "tst" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
+        "teq" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
+        "cmp" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
+        "cmn" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
+        "mov" => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MOV),
+        "bic" => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
+        "mvn" | "not" => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
         _ => Err(span_err(opcode_pair.as_span(), "Invalid opcode")),
     }
 }
 
-fn assemble_mov(pairs: &mut Pairs<'_, Rule>, span: Span<'_>) -> Res<Instruction> {
+fn assemble_two_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<Instruction> {
     let dest_reg = pairs.next().ok_or(span_err(span, "Missing destination"))?;
     let src = pairs.next().ok_or(span_err(span, "Missing source"))?;
 
-    let dest = parse_reg(dest_reg)?;
+    if pairs.next().is_some() {
+        return Err(span_err(span, "Expected end of instruction"))
+    }
 
-    let operand = match src.as_rule() {
-        Rule::literal => DataProcessingOperand::Immediate {
-            rotate: 0,
-            value: parse_literal(src)? as u8,
-        },
-        Rule::register => DataProcessingOperand::Register {
-            shift: Shift {
-                amount: crate::ShiftAmount::Immediate(0),
-                ty: crate::ShiftType::LogicalLeft
-            },
-            register: parse_reg(src)?,
-        },
-        _ => Err(span_err(src.as_span(), "Invalid source"))?,
-    };
+    let dest = parse_reg(dest_reg)?;
+    let operand = parse_dp_operand(src)?;
 
     Ok(Instruction {
         condition: Condition::default(),
         instruction_body: InstructionBody::DataProcessing(DataProcessing {
             dest,
-            opcode: DataProcessingOpcode::MOV,
+            opcode,
             operand,
             set_condition_codes: false,
-            register: Register(0) // TODO: Expand instruction to use this as extra immediate space
+            register: Register(0) // TODO: Expand instruction to use this as extra immediate space for MOV
         })
     })
+}
+
+fn assemble_three_arg_dp(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, opcode: DataProcessingOpcode) -> Res<Instruction> {
+    let dest_reg = pairs.next().ok_or(span_err(span, "Missing destination"))?;
+    let lhs = pairs.next().ok_or(span_err(span, "Missing lhs"))?;
+    let rhs = pairs.next().ok_or(span_err(span, "Missing rhs"))?;
+
+    if pairs.next().is_some() {
+        return Err(span_err(span, "Expected end of instruction"))
+    }
+
+    let dest = parse_reg(dest_reg)?;
+    let lhs = parse_reg(lhs)?;
+    let operand = parse_dp_operand(rhs)?;
+
+    Ok(Instruction {
+        condition: Condition::default(),
+        instruction_body: InstructionBody::DataProcessing(DataProcessing {
+            dest,
+            opcode,
+            operand,
+            set_condition_codes: false,
+            register: lhs
+        })
+    })
+}
+
+fn parse_dp_operand(src: Pair<'_, Rule>) -> Res<DataProcessingOperand> {
+    match src.as_rule() {
+        Rule::literal => Ok(DataProcessingOperand::Immediate {
+            rotate: 0,
+            value: parse_literal(src)? as u8,
+        }),
+        Rule::register => Ok(DataProcessingOperand::Register {
+            shift: Shift {
+                amount: crate::ShiftAmount::Immediate(0),
+                ty: crate::ShiftType::LogicalLeft
+            },
+            register: parse_reg(src)?,
+        }),
+        _ => Err(span_err(src.as_span(), "Invalid source"))?,
+    }
 }
 
 fn parse_reg(reg: Pair<'_, Rule>) -> Res<Register> {
