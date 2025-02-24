@@ -6,10 +6,13 @@
     import Memory from "$lib/Memory.svelte";
     import { FLAGS, RAM, REGISTERS } from "$lib/globals";
     import Registers from "$lib/Registers.svelte";
-    import { get } from "svelte/store";
     import * as monacoEditor from 'monaco-editor';
+    import Controls from "$lib/Controls.svelte";
 
     let container: HTMLDivElement
+    let header: HTMLHeadElement
+    let editor: monacoEditor.editor.IStandaloneCodeEditor
+
     onMount(async () => {
         await init()
 
@@ -19,9 +22,8 @@
         lang.init(monaco)
         
 
-        const editor = monaco.editor.create(container, {
+        editor = monaco.editor.create(container, {
             theme: "vs-dark",
-            automaticLayout: true,
             fontFamily: "JetBrains Mono"
         })
         const model = monaco.editor.createModel(
@@ -34,36 +36,32 @@
         editor.setModel(model)
     })
 
-    type ExecutionResult = {
-        message: string,
-        flags: number
+    const updateEditorSize = () => {
+        // TODO: Try to do this with CSS
+        const height = window.innerHeight - header.offsetHeight
+        editor.layout({
+            width: container.offsetWidth,
+            height: height
+        })
     }
 
-    function stepCpu() {
-        console.log("step")
-        const res: ExecutionResult = step(get(RAM), get(REGISTERS), get(FLAGS))
-        console.log(res)
-        $FLAGS = res.flags
-        REGISTERS.update(v => v)
-        RAM.update(v => v)
-        console.log($REGISTERS)
-    }
-
-    function ResetCpu() {
-        $FLAGS = 0
-        REGISTERS.update(r => r.fill(0))
-        RAM.update(r => r.fill(0))
-    }
 </script>
 
-<div class="w-full flex flex-row font-mono">
-    <div bind:this={container} class="h-screen w-1/3 relative"></div>
-    <Memory memory={$RAM} />
-    <div class="w-20">
-        <Registers flags={$FLAGS} registers={$REGISTERS} />
-    </div>
-    <div>
-        <button onclick={stepCpu}>Step</button>
-        <button onclick={ResetCpu}>Reset</button>
+<svelte:window 
+    on:resize={updateEditorSize}
+/>
+
+<div class="h-screen max-h-screen flex flex-col">
+    <header bind:this={header} class="bg-base-300 flex flex-row justify-between">
+        <div></div>
+        <Controls />
+        <div></div>
+    </header>
+    <div class="w-full flex flex-row font-mono justify-between h-full relative">
+        <div bind:this={container} class="w-1/3 h-full"></div>
+        <div class="grow">
+            <Registers flags={$FLAGS} registers={$REGISTERS} />
+        </div>
+        <Memory memory={$RAM} />
     </div>
 </div>
