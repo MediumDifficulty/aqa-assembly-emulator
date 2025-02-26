@@ -181,8 +181,8 @@ export function initModel(ctx: Monaco, model: editor.ITextModel) {
         let lints: Lint[] = engine.lint(modelValue)
 
         ctx.editor.setModelMarkers(model, "linter", lints.map(lint => {
-            const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
             console.log(lint)
+            const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
             return {
                 startLineNumber: lint.line + 1,
                 endLineNumber: lint.line + 1,

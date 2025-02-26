@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { PROGRAM_COUNTER } from "./globals";
 
     const { memory }: { memory: Uint8Array } = $props()
 
@@ -41,7 +42,8 @@
                         {#if byteIdx >= memory.length}
                             <span class="text-warning mx-1">00</span>
                         {:else}
-                            <span class="text-base-content mx-1">{new Number(memory[byteIdx]).toString(16).padStart(2, "0")}</span>
+                            {@const highlight = byteIdx >= $PROGRAM_COUNTER && byteIdx < $PROGRAM_COUNTER + 4}
+                            <span class={[ "text-base-content mx-1", highlight && "text-success" ]}>{new Number(memory[byteIdx]).toString(16).padStart(2, "0")}</span>
                         {/if}
                     {/each}
                 </span>

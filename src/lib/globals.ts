@@ -1,10 +1,12 @@
-import { writable } from "svelte/store";
+import { derived, writable } from "svelte/store";
 
 export const RAM_SIZE = 256 * 4;
 
 export const RAM = writable(new Uint8Array(RAM_SIZE))
 export const REGISTERS = writable(new Uint32Array(16))
 export const FLAGS = writable(0)
+
+export const PROGRAM_COUNTER = derived(REGISTERS, registers => registers[15])
 
 export enum NumberFormat {
     Hex,

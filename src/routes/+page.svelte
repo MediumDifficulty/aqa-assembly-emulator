@@ -52,10 +52,10 @@
 />
 
 <div class="h-screen max-h-screen flex flex-col">
-    <header bind:this={header} class="bg-base-300 flex flex-row justify-between">
-        <div></div>
-        <Controls />
-        <div></div>
+    <header bind:this={header} class="bg-base-300 relative w-full">
+        <div class="mx-auto w-fit text-lg mt-1">
+            <Controls />
+        </div>
     </header>
     <div class="w-full flex flex-row font-mono justify-between h-full relative">
         <div bind:this={container} class="w-1/3 h-full"></div>
