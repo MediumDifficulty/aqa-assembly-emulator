@@ -16,10 +16,16 @@ mod deserialise;
 
 #[wasm_bindgen]
 pub fn lint(src: &str) -> Vec<JsValue> {
-    src.lines()
+    let parsed = assembler::parse_per_line(src);
+    let labels = assembler::get_lint_labels(&parsed);
+
+    parsed
+        .into_iter()
         .enumerate()
         .filter_map(|(i, line)| {
-            match assembler::lint_line(line) {
+            let line = line.and_then(|mut line| assembler::lint_line(line.next().unwrap(), &labels));
+
+            match line {
                 Ok(_) => None,
                 Err(e) => {
                     let span = match e.location {
@@ -28,7 +34,7 @@ pub fn lint(src: &str) -> Vec<JsValue> {
                     };
 
                     Some(Lint {
-                        err: e.with_path("program.as").to_string(),
+                        err: e.clone().with_path("program.as").to_string(),
                         from: span.0 as u32,
                         to: span.1 as u32,
                         line: i as u32

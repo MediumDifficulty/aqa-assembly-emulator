@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Div};
 
+use log::info;
 use pest::{
     error::ErrorVariant,
     iterators::{Pair, Pairs},
@@ -7,29 +8,31 @@ use pest::{
 };
 
 use crate::{
-    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, unwrap_or_return, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
+    parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
 };
 
 const MAX_REG_NUM: u8 = 15;
 
-type Res<T> = Result<T, pest::error::Error<parser::Rule>>;
+pub type Res<T> = Result<T, pest::error::Error<parser::Rule>>;
 
 pub fn assemble(src: &str) -> Res<Program> {
     let parsed = AssemblyParser::parse(Rule::program, src)?.next().unwrap();
 
-    let mut labels = HashMap::new();
-    let mut instructions = Vec::new();
+    let labels = get_labels(&parsed);
 
-    for (i, line) in parsed.into_inner().enumerate() {
+    info!("{labels:#?}");
+
+    let mut instructions = Vec::new();
+    let mut current_addr = 0;
+
+    for line in parsed.into_inner() {
         let line = unwrap_or_continue!(line.into_inner().next());
         match line.as_rule() {
-            Rule::label => {
-                let label = line.into_inner().next().expect("Invalid label").as_str();
-                labels.insert(label.to_string(), i);
-            }
             Rule::instruction => {
-                instructions.push(assemble_instruction(line)?);
+                instructions.push(assemble_instruction(line, &labels, current_addr)?);
+                current_addr += 4;
             }
+            Rule::label => {},
             _ => unreachable!(),
         }
     }
@@ -37,24 +40,44 @@ pub fn assemble(src: &str) -> Res<Program> {
     Ok(Program { instructions })
 }
 
-pub fn lint_line(line: &str) -> Res<()> {
-    let parsed = 
-        unwrap_or_return!(
-            unwrap_or_return!(
-                AssemblyParser::parse(Rule::lint_line, line)?
-                    .next(),
-                Ok(())
-            )
-            .into_inner()
-            .next(),
-            Ok(())
-        );
+pub fn get_lint_labels(lines: &[Res<Pairs<'_, Rule>>]) -> HashMap<String, u32> {
+    let labels = lines.iter()
+        .filter_map(|line| line.as_ref().ok())
+        .cloned()
+        .filter_map(|mut line| {
+            line.next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .and_then(|line| match line.as_rule() {
+                    parser::Rule::label => Some(line.into_inner().next().unwrap().as_str().to_string()),
+                    _ => None
+                })
+        });
+
+    labels
+        .map(|label| (label, 0))
+        .collect()
+}
+
+pub fn parse_per_line(src: &str) -> Vec<Res<Pairs<'_, Rule>>> {
+    src
+        .lines()
+        .map(|line| AssemblyParser::parse(Rule::lint_line, line))
+        .collect::<Vec<_>>()
+}
+
+pub fn lint_line(parsed: Pair<'_, Rule>, labels: &HashMap<String, u32>) -> Res<()> {
+    let parsed = match parsed.into_inner().next() {
+        Some(p) => p,
+        None => return Ok(()),
+    };
 
     match parsed.as_rule() {
         Rule::label => Ok(()),
-        Rule::instruction => assemble_instruction(parsed).map(|_| ()),
+        Rule::instruction => assemble_instruction(parsed, labels, 0).map(|_| ()),
         Rule::EOI => Ok(()),
-        _ => unreachable!(),
+        _ => unreachable!("{parsed:?}"),
     }
 }
 
@@ -67,7 +90,23 @@ fn span_err(span: Span<'_>, msg: &str) -> pest::error::Error<parser::Rule> {
     )
 }
 
-fn assemble_instruction(src: Pair<'_, parser::Rule>) -> Res<Instruction> {
+fn get_labels(src: &Pair<'_, Rule>) -> HashMap<String, u32> {
+    let mut addr = 0;
+    let mut labels = HashMap::new();
+
+    for line in src.clone().into_inner() {
+        let line = unwrap_or_continue!(line.into_inner().next());
+        match line.as_rule() {
+            Rule::label => { labels.insert(line.into_inner().next().unwrap().as_str().to_string(), addr); },
+            Rule::instruction => addr += 4,
+            _ => unreachable!("{line:?}")
+        }
+    }
+
+    labels
+}
+
+fn assemble_instruction(src: Pair<'_, parser::Rule>, labels: &HashMap<String, u32>, current_addr: u32) -> Res<Instruction> {
     let src_span = src.as_span();
     let mut inner = src.into_inner();
     let opcode_pair = inner.next().ok_or(span_err(src_span, "Missing opcode"))?;
@@ -99,8 +138,8 @@ fn assemble_instruction(src: Pair<'_, parser::Rule>) -> Res<Instruction> {
         Rule::op_mov => assemble_two_arg_dp_dest(&mut inner, src_span, DataProcessingOpcode::MOV),
         Rule::op_bic => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
         Rule::op_mvn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
-        Rule::op_b => assemble_branch(&mut inner, src_span, false),
-        Rule::op_bl => assemble_branch(&mut inner, src_span, true),
+        Rule::op_b => assemble_branch(&mut inner, src_span, false, labels, current_addr),
+        Rule::op_bl => assemble_branch(&mut inner, src_span, true, labels, current_addr),
         _ => Err(span_err(opcode_span, "Invalid opcode")),
     }?;
 
@@ -130,10 +169,14 @@ impl Condition {
     }
 }
 
-fn assemble_branch(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, link: bool) -> Res<InstructionBody> {
+fn assemble_branch(pairs: &mut Pairs<'_, Rule>, span: Span<'_>, link: bool, labels: &HashMap<String, u32>, current_addr: u32) -> Res<InstructionBody> {
     let offset = pairs.next().ok_or(span_err(span, "Missing offset"))?;
     let offset = match offset.as_rule() {
         Rule::literal => parse_literal(offset)?,
+        Rule::text => labels.get(offset.as_str())
+            .ok_or(span_err(span, "Unknown label"))?
+            .div(4)
+            .wrapping_sub(current_addr / 4 + 1),
         _ => return Err(span_err(span, "Invalid offset"))
     };
 
