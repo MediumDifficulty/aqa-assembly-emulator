@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use assembler::assemble;
 use log::info;
 use num_derive::FromPrimitive;
@@ -15,11 +17,12 @@ mod emulator;
 mod deserialise;
 
 #[wasm_bindgen]
-pub fn lint(src: &str) -> Vec<JsValue> {
+pub fn lint(src: &str) -> JsValue {
     let parsed = assembler::parse_per_line(src);
     let labels = assembler::get_lint_labels(&parsed);
+    let source_map = assembler::gen_source_map(&parsed);
 
-    parsed
+    let lints = parsed
         .into_iter()
         .enumerate()
         .filter_map(|(i, line)| {
@@ -42,8 +45,13 @@ pub fn lint(src: &str) -> Vec<JsValue> {
                 },
             }
         })
-        .map(|lint| serde_wasm_bindgen::to_value(&lint).unwrap())
-        .collect::<Vec<_>>()
+        // .map(|lint| serde_wasm_bindgen::to_value(&lint).unwrap())
+        .collect::<Vec<_>>();
+
+    serde_wasm_bindgen::to_value(&Lints {
+        lints,
+        source_map
+    }).unwrap()
 }
 
 #[wasm_bindgen]
@@ -74,6 +82,12 @@ pub fn step(ram: &mut [u8], registers: &mut [u32], flags: u8) -> JsValue {
 struct ExecutionResult {
     message: String,
     flags: u8
+}
+
+#[derive(Serialize)]
+struct Lints {
+    lints: Vec<Lint>,
+    source_map: HashMap<u32, u32>
 }
 
 #[derive(Serialize)]

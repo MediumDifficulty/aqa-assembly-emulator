@@ -67,6 +67,30 @@ pub fn parse_per_line(src: &str) -> Vec<Res<Pairs<'_, Rule>>> {
         .collect::<Vec<_>>()
 }
 
+pub fn gen_source_map(lines: &[Res<Pairs<'_, Rule>>]) -> HashMap<u32, u32> {
+    let mut current_addr = 0;
+    let mut source_map = HashMap::new();
+
+    for (i, line) in lines.iter().cloned().enumerate() {
+        if let Ok(mut line) = line {
+            if let Some(line) = line.next()
+                .unwrap()
+                .into_inner()
+                .next() {
+                    match line.as_rule() {
+                        parser::Rule::instruction => {
+                            source_map.insert(current_addr as u32, i as u32);
+                            current_addr += 4;
+                        },
+                        _ => {}
+                    }
+                }
+        }
+    }
+
+    source_map
+}
+
 pub fn lint_line(parsed: Pair<'_, Rule>, labels: &HashMap<String, u32>) -> Res<()> {
     let parsed = match parsed.into_inner().next() {
         Some(p) => p,

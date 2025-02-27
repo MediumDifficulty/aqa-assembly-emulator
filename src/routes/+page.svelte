@@ -31,7 +31,7 @@
             "aqa-assembly"
         )
         
-        lang.initModel(monaco, model)
+        lang.initModel(monaco, model, editor)
 
         editor.setModel(model)
     })

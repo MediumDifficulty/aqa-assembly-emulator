@@ -1,7 +1,7 @@
 import type { Monaco } from "@monaco-editor/loader";
-import { MarkerSeverity, type editor, type IRange, type languages, type Position } from "monaco-editor";
+import { editor, MarkerSeverity, type IRange, type languages, type Position } from "monaco-editor";
 import * as engine from "./engine/engine";
-import { RAM } from "./globals";
+import { PROGRAM_COUNTER, RAM } from "./globals";
 import { get } from "svelte/store";
 
 enum Operand {
@@ -173,14 +173,40 @@ export function init(ctx: Monaco) {
     })
 }
 
-export function initModel(ctx: Monaco, model: editor.ITextModel) {
+export function initModel(ctx: Monaco, model: editor.ITextModel, editor: editor.IStandaloneCodeEditor) {
+    let lints: Lints = {
+        lints: [],
+        source_map: new Map()
+    }
+    let decorations = editor.createDecorationsCollection([])
+
+    const updateInstructionHighlight = () => {
+        console.log("Update:", lints)
+        let instructionLine = lints.source_map.get(get(PROGRAM_COUNTER))
+        if (instructionLine) {
+            decorations.set([
+                {
+                    range: new ctx.Range(instructionLine + 1, 1, instructionLine + 1, 1),
+                    options: {
+                        isWholeLine: true,
+                        className: "bg-success opacity-25"
+                    }
+                }
+            ])
+        }
+    }
+
+    PROGRAM_COUNTER.subscribe(() => updateInstructionHighlight())
+
     model.onDidChangeContent(e => {
         const modelValue = model.getValue()
         engine.assemble_into_ram(modelValue, get(RAM))
-        RAM.update(r => r)
-        let lints: Lint[] = engine.lint(modelValue)
 
-        ctx.editor.setModelMarkers(model, "linter", lints.map(lint => {
+        RAM.update(r => r)
+        lints = engine.lint(modelValue)
+        updateInstructionHighlight()
+
+        ctx.editor.setModelMarkers(model, "linter", lints.lints.map(lint => {
             console.log(lint)
             const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
             return {
@@ -194,6 +220,12 @@ export function initModel(ctx: Monaco, model: editor.ITextModel) {
         }))
         // console.log("lint:", )
     })
+
+}
+
+type Lints = {
+    source_map: Map<number, number>,
+    lints: Lint[]
 }
 
 type Lint = {
