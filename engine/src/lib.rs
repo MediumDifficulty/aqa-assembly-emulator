@@ -4,6 +4,7 @@ use assembler::assemble;
 use log::info;
 use num_derive::FromPrimitive;
 use serde::Serialize;
+use strum_macros::EnumIter;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 #[cfg(test)] use proptest_derive::Arbitrary;
@@ -272,7 +273,7 @@ pub enum DataProcessingOpcode {
     MVN,
 }
 
-#[derive(Default, Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, EnumIter)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum Condition {
     EQ,

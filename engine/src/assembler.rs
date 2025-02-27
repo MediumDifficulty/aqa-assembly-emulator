@@ -1,10 +1,10 @@
 use std::{collections::HashMap, ops::Div};
 
 use pest::{
-    error::ErrorVariant,
-    iterators::{Pair, Pairs},
-    Parser, Span,
+    error::ErrorVariant, iterators::{Pair, Pairs}, Parser, Span
 };
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 use crate::{
     parser::{self, AssemblyParser, Rule}, unwrap_or_continue, Condition, DataProcessing, DataProcessingOpcode, DataProcessingOperand, Instruction, InstructionBody, Program, Register, Shift
@@ -130,62 +130,124 @@ fn get_labels(src: &Pair<'_, Rule>) -> HashMap<String, u32> {
 fn assemble_instruction(src: Pair<'_, parser::Rule>, labels: &HashMap<String, u32>, current_addr: u32) -> Res<Instruction> {
     let src_span = src.as_span();
     let mut inner = src.into_inner();
-    let opcode_pair = inner.next().ok_or(span_err(src_span, "Missing opcode"))?;
-    let opcode_span = opcode_pair.as_span();
-    let mut opcode_pair = opcode_pair.into_inner();
+    let opcode = inner.next().ok_or(span_err(src_span, "Missing opcode"))?;
+    // let opcode_span = opcode.as_span();
+    
+    if let Some((opcode, condition)) = parse_opcode(opcode.as_str()) {
+        let body = match opcode {
+            Opcode::And => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::AND),
+            Opcode::Eor => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::EOR),
+            Opcode::Sub => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::SUB),
+            Opcode::Rsb => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSB),
+            Opcode::Add => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
+            Opcode::Adc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
+            Opcode::Rsc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
+            Opcode::Tst => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
+            Opcode::Teq => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
+            Opcode::Cmp => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
+            Opcode::Cmn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
+            Opcode::Or => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ORR),
+            Opcode::Mov => assemble_two_arg_dp_dest(&mut inner, src_span, DataProcessingOpcode::MOV),
+            Opcode::Bic => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
+            Opcode::Mvn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
+            Opcode::B => assemble_branch(&mut inner, src_span, false, labels, current_addr),
+            Opcode::Bl => assemble_branch(&mut inner, src_span, true, labels, current_addr),
+        }?;
+        Ok(Instruction { condition, body })
+    } else {
+        Err(span_err(src_span, "Invalid opcode"))
+    }
 
-    let opcode_rule = opcode_pair.next().ok_or(span_err(src_span, "Missing base"))?.as_rule();
-    let condition_rule = opcode_pair.next()
-        .map(|cond| cond.as_rule())
-        .unwrap_or(Rule::cond_al);
+}
 
-    let condition = Condition::from_rule(condition_rule) 
-        .ok_or(span_err(src_span, "Invalid condition"))?;
+#[derive(EnumIter, Debug)]
+enum Opcode {
+    And,
+    Eor,
+    Sub,
+    Rsb,
+    Add,
+    Adc,
+    Rsc,
+    Tst,
+    Teq,
+    Cmp,
+    Cmn,
+    Or,
+    Mov,
+    Bic,
+    Mvn,
+    B,
+    Bl
+}
 
+impl Opcode {
+    pub fn as_str(&self) -> &'static [&'static str] {
+        match self {
+            Opcode::And => &["and"],
+            Opcode::Eor => &["eor", "xor"],
+            Opcode::Sub => &["sub"],
+            Opcode::Rsb => &["rsb"],
+            Opcode::Add => &["add"],
+            Opcode::Adc => &["adc"],
+            Opcode::Rsc => &["rsc"],
+            Opcode::Tst => &["tst"],
+            Opcode::Teq => &["teq"],
+            Opcode::Cmp => &["cmp"],
+            Opcode::Cmn => &["cmn"],
+            Opcode::Or =>  &["or", "orr"],
+            Opcode::Mov => &["mov"],
+            Opcode::Bic => &["bic"],
+            Opcode::Mvn => &["mvn"],
+            Opcode::B =>   &["b"],
+            Opcode::Bl =>  &["bl"],
+        }
+    }
+}
 
-    let body = match &opcode_rule {
-        Rule::op_and => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::AND),
-        Rule::op_eor => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::EOR),
-        Rule::op_sub => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::SUB),
-        Rule::op_rsb => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSB),
-        Rule::op_add => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADD),
-        Rule::op_adc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ADC),
-        Rule::op_rsc => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::RSC),
-        Rule::op_tst => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TST),
-        Rule::op_teq => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::TEQ),
-        Rule::op_cmp => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMP),
-        Rule::op_cmn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::CMN),
-        Rule::op_or => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::ORR),
-        Rule::op_mov => assemble_two_arg_dp_dest(&mut inner, src_span, DataProcessingOpcode::MOV),
-        Rule::op_bic => assemble_three_arg_dp(&mut inner, src_span, DataProcessingOpcode::BIC),
-        Rule::op_mvn => assemble_two_arg_dp(&mut inner, src_span, DataProcessingOpcode::MVN),
-        Rule::op_b => assemble_branch(&mut inner, src_span, false, labels, current_addr),
-        Rule::op_bl => assemble_branch(&mut inner, src_span, true, labels, current_addr),
-        _ => Err(span_err(opcode_span, "Invalid opcode")),
-    }?;
+fn parse_opcode(src: &str) -> Option<(Opcode, Condition)> {
+    let src = src.to_ascii_lowercase();
+    for opcode in Opcode::iter() {
+        for op_str in opcode.as_str() {
+            if !src.starts_with(op_str) {
+                continue;
+            }
 
-    Ok(Instruction { condition, body })
+            let remaining = &src[op_str.len()..];
+
+            if remaining.is_empty() {
+                return Some((opcode, Condition::AL))
+            }
+
+            for condition in Condition::iter() {
+                if remaining == condition.as_str() {
+                    return Some((opcode, condition));
+                }
+            }
+        }
+    }
+
+    None
 }
 
 impl Condition {
-    fn from_rule(rule: Rule) -> Option<Self> {
-        match rule {
-            Rule::cond_eq => Some(Condition::EQ),
-            Rule::cond_ne => Some(Condition::NE),
-            Rule::cond_cs => Some(Condition::CS),
-            Rule::cond_cc => Some(Condition::CC),
-            Rule::cond_mi => Some(Condition::MI),
-            Rule::cond_pl => Some(Condition::PL),
-            Rule::cond_vs => Some(Condition::VS),
-            Rule::cond_vc => Some(Condition::VC),
-            Rule::cond_hi => Some(Condition::HI),
-            Rule::cond_ls => Some(Condition::LS),
-            Rule::cond_ge => Some(Condition::GE),
-            Rule::cond_lt => Some(Condition::LT),
-            Rule::cond_gt => Some(Condition::GT),
-            Rule::cond_le => Some(Condition::LE),
-            Rule::cond_al => Some(Condition::AL),
-            _ => None
+    fn as_str(&self) -> &'static str {
+        match self {
+            Condition::EQ => "eq",
+            Condition::NE => "ne",
+            Condition::CS => "cs",
+            Condition::CC => "cc",
+            Condition::MI => "mi",
+            Condition::PL => "pl",
+            Condition::VS => "vs",
+            Condition::VC => "vc",
+            Condition::HI => "hi",
+            Condition::LS => "ls",
+            Condition::GE => "ge",
+            Condition::LT => "lt",
+            Condition::GT => "gt",
+            Condition::LE => "le",
+            Condition::AL => "al",
         }
     }
 }
