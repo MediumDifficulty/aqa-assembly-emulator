@@ -28,19 +28,21 @@
     const { registers, flags }: { registers: Uint32Array, flags: number } = $props()
 </script>
 
-<div class="relative w-full">
+<div class="inline-block">
     {#each REGISTER_NAMES as name, i}
-        <div class="flex justify-between">
-            <span>{name}</span>
-            <span>{registers[i]}</span>
+        <div>{name}</div>
+    {/each}    
+</div>
+<div class="inline-block">
+    {#each REGISTER_NAMES as _, i}
+        <div>{registers[i]}</div>
+    {/each}    
+</div>
+<div class="">
+    {#each FLAG_NAMES as name, i}
+        <div class="inline-block mr-1">
+            <div>{name}</div>
+            <div>{(flags >> (3 - i)) & 1}</div>
         </div>
     {/each}
-    <div class="flex flex-row justify-between">
-        {#each FLAG_NAMES as name, i}
-            <span>
-                <div>{name}</div>
-                <div>{(flags >> (3 - i)) & 1}</div>
-            </span>
-        {/each}
-    </div>
 </div>

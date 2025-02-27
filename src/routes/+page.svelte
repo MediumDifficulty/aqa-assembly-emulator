@@ -52,9 +52,17 @@
 />
 
 <div class="h-screen max-h-screen flex flex-col">
-    <header bind:this={header} class="bg-base-300 relative w-full">
-        <div class="mx-auto w-fit text-lg mt-1">
-            <Controls />
+    <header bind:this={header} class="bg-base-300 relative w-full grid grid-cols-3">
+        <select class="select select-sm select-ghost w-fit">
+            <option>Decimal (Signed)</option>
+            <option>Decimal (Unsigned)</option>
+            <option>Hex</option>
+            <option>Binary</option>
+        </select>
+        <div class="grid place-items-center">
+            <div class="h-fit">
+                <Controls />
+            </div>
         </div>
     </header>
     <div class="w-full flex flex-row font-mono justify-between h-full relative">

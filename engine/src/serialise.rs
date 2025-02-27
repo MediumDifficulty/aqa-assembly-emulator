@@ -1,6 +1,5 @@
 use bitvec::{field::BitField, order::Msb0, slice::BitSlice, view::AsMutBits};
 use funty::Integral;
-use log::info;
 
 use crate::{Branch, DataProcessing, Instruction, Register, Shift, ShiftAmount};
 
@@ -23,7 +22,6 @@ fn print_serialised(serialised: &[u8]) {
     for byte in serialised {
         s.push_str(format!("{byte:08b}").as_str());
     }
-    info!("{s}");
 }
 
 struct InstructionWriter<'a> {

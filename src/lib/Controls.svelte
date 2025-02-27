@@ -26,12 +26,12 @@
 </script>
 
 <div class="tooltip tooltip-bottom" data-tip="Step">
-    <button onclick={stepCpu} class="text-success cursor-pointer m-0.5"><DebugStepOver /></button>
+    <button onclick={stepCpu} class="text-success cursor-pointer m-0.5 h-fit"><DebugStepOver /></button>
 </div>
 <div class="tooltip tooltip-bottom" data-tip="Run (WIP)">
-    <button class="text-success cursor-pointer m-0.5"><DebugContinue /></button>
+    <button class="text-success cursor-pointer m-0.5 h-fit"><DebugContinue /></button>
 </div>
 <div class="tooltip tooltip-bottom" data-tip="Reset">
-    <button onclick={ResetCpu} class="text-warning cursor-pointer m-0.5"><DebugRestart /></button>
+    <button onclick={ResetCpu} class="text-warning cursor-pointer m-0.5 h-fit"><DebugRestart /></button>
 </div>
 

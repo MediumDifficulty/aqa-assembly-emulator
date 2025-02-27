@@ -20,8 +20,6 @@
         return !containerHeight ? 20 : containerHeight as number / LINE_HEIGHT
     })
 
-    $effect(() => console.log(containerHeight, lines()))
-
     onMount(() => {
         observer.observe(document.body)
         containerHeight = container.clientHeight

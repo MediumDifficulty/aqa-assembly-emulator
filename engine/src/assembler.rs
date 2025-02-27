@@ -1,6 +1,5 @@
 use std::{collections::HashMap, ops::Div};
 
-use log::info;
 use pest::{
     error::ErrorVariant,
     iterators::{Pair, Pairs},
@@ -19,8 +18,6 @@ pub fn assemble(src: &str) -> Res<Program> {
     let parsed = AssemblyParser::parse(Rule::program, src)?.next().unwrap();
 
     let labels = get_labels(&parsed);
-
-    info!("{labels:#?}");
 
     let mut instructions = Vec::new();
     let mut current_addr = 0;

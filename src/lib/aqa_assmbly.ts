@@ -181,7 +181,6 @@ export function initModel(ctx: Monaco, model: editor.ITextModel, editor: editor.
     let decorations = editor.createDecorationsCollection([])
 
     const updateInstructionHighlight = () => {
-        console.log("Update:", lints)
         let instructionLine = lints.source_map.get(get(PROGRAM_COUNTER))
         if (instructionLine) {
             decorations.set([
@@ -207,7 +206,6 @@ export function initModel(ctx: Monaco, model: editor.ITextModel, editor: editor.
         updateInstructionHighlight()
 
         ctx.editor.setModelMarkers(model, "linter", lints.lints.map(lint => {
-            console.log(lint)
             const firstChar = model.getLineFirstNonWhitespaceColumn(lint.line)
             return {
                 startLineNumber: lint.line + 1,
@@ -218,7 +216,6 @@ export function initModel(ctx: Monaco, model: editor.ITextModel, editor: editor.
                 severity: MarkerSeverity.Error
             }
         }))
-        // console.log("lint:", )
     })
 
 }
